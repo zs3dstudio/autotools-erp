@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  # ─── MySQL Database ─────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: autotools_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_change_me}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-autotools_erp}
+      MYSQL_USER: ${MYSQL_USER:-erp_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-erp_password_change_me}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./drizzle/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_password_change_me}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - autotools_net
+
+  # ─── Application Server ─────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autotools_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://${MYSQL_USER:-erp_user}:${MYSQL_PASSWORD:-erp_password_change_me}@db:3306/${MYSQL_DATABASE:-autotools_erp}
+      VITE_APP_ID: ${VITE_APP_ID}
+      JWT_SECRET: ${JWT_SECRET}
+      OAUTH_SERVER_URL: ${OAUTH_SERVER_URL}
+      OWNER_OPEN_ID: ${OWNER_OPEN_ID}
+      BUILT_IN_FORGE_API_URL: ${BUILT_IN_FORGE_API_URL:-}
+      BUILT_IN_FORGE_API_KEY: ${BUILT_IN_FORGE_API_KEY:-}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - autotools_net
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  autotools_net:
+    driver: bridge

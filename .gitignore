@@ -16,4 +16,4 @@ out/
 build/
 coverage/
 .turbo/
-# pnpm-lock.yaml (Included for Railway)
+pnpm-lock.yaml

@@ -900,13 +900,13 @@ export async function getSales(opts: any = {}) {
   if (opts.branchId) {
     query = query.where(eq(sales.branchId, opts.branchId));
   }
-  return query.orderBy(desc(sales.createdAt));
+  return await query.orderBy(desc(sales.createdAt));
 }
 
 export async function getTopProducts(opts: any = {}) {
   const db = await getDb();
   const limit = opts.limit || 10;
-  return db.select().from(products).where(eq(products.isActive, true)).orderBy(desc(products.retailPrice)).limit(limit);
+  return await db.select().from(products).where(eq(products.isActive, true)).orderBy(desc(products.retailPrice)).limit(limit);
 }
 
 export async function getDashboardStats(branchId?: number) {
@@ -916,7 +916,7 @@ export async function getDashboardStats(branchId?: number) {
     const invWhereClause = branchId ? eq(inventoryItems.branchId, branchId) : undefined;
 
     const totalSalesResult = db.select({ total: sql<string>`COALESCE(SUM(totalAmount), 0)` }).from(sales).where(whereClause).get() as { total: string };
-    const totalCostResult = db.select({ total: sql<string>`COALESCE(SUM(si.landingCost), 0)` }).from(saleItems, sql`sale_items si`).where(whereClause ? sql`si.saleId IN (SELECT id FROM sales WHERE branchId = ${branchId})` : undefined).get() as { total: string };
+    const totalCostResult = db.select({ total: sql<string>`COALESCE(SUM(CAST(landingCost AS REAL)), 0)` }).from(saleItems).where(whereClause ? sql`saleId IN (SELECT id FROM sales WHERE branchId = ${branchId})` : undefined).get() as { total: string };
     const totalTransactionsResult = db.select({ count: sql<number>`COUNT(*)` }).from(sales).where(whereClause).get() as { count: number };
     const availableStockResult = db.select({ count: sql<number>`COUNT(*)` }).from(inventoryItems).where(invWhereClause ? and(invWhereClause, eq(inventoryItems.status, "available")) : eq(inventoryItems.status, "available")).get() as { count: number };
     const pendingTransfersResult = db.select({ count: sql<number>`COUNT(*)` }).from(stockTransfers).where(eq(stockTransfers.status, "pending")).get() as { count: number };
@@ -960,7 +960,7 @@ export async function getMonthlySalesReport(opts: any = {}) {
     if (branchId) {
       query = query.where(eq(sales.branchId, branchId));
     }
-    const results = query.orderBy(desc(sales.createdAt)).all();
+    const results = await query.orderBy(desc(sales.createdAt));
     return results || [];
   } catch (error) {
     console.error("Error getting monthly sales report:", error);

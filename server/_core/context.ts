@@ -16,15 +16,16 @@ export type TrpcContext = {
   user: (User & { branchId?: number | null; permissions?: any }) | null;
 };
 
-import { db } from "../db";
+import { getDb, getUserByOpenId } from "../db";
 import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 const SUPERADMIN_EMAIL = "meshcraftstudio@gmail.com";
-const TEMP_PASSWORD = "TempPassword123!"; // User must change this immediately
+const TEMP_PASSWORD = "Meshcraft123"; // User must change this immediately
 
 async function ensureSuperAdminExists() {
+  const db = await getDb();
   const existingUser = await db.select().from(users).where(eq(users.email, SUPERADMIN_EMAIL)).limit(1);
 
   if (existingUser.length === 0) {
@@ -88,7 +89,7 @@ export async function createContext(
       const sessionUser = await sdk.authenticateRequest(opts.req);
       if (sessionUser) {
         // Enrich with full user data from MySQL
-        const { getUserByOpenId } = await import("../db");
+        // getUserByOpenId is already imported at the top
         user = await getUserByOpenId((sessionUser as any).openId ?? (sessionUser as any).id) ?? sessionUser;
       }
     } catch {

@@ -10,5 +10,3 @@ cmds = ["npm run build"]
 [start]
 cmd = "npm run start"
 
-[phases.postBuild]
-cmds = ["npm install --legacy-peer-deps && npm run build:set-superadmin && node dist/scripts/setSuperAdmin.js"]

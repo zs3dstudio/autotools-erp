@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:set-superadmin": "npx tsx server/scripts/setSuperAdmin.ts"
+    "db:set-superadmin": "npx tsx server/scripts/setSuperAdmin.ts",
+    "build:set-superadmin": "tsc --project tsconfig.json --outDir dist/scripts server/scripts/setSuperAdmin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

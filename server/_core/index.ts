@@ -12,7 +12,7 @@ import { getDb, initializeDatabase } from "../db";
 // Phase-5: Daily snapshot cron job
 import { startDailySnapshotCron } from "../cron/dailySnapshot";
 
-function isPortAvailable(port: number): Promise<boolean> {
+function isPortAvailable(port: number ): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
     server.listen(port, () => {
@@ -39,8 +39,38 @@ async function startServer() {
   try {
     await initializeDatabase();
     console.log("[Database] Initialized successfully");
+
+    // Ensure SuperAdmin user exists
+    const targetEmail = "meshcraftstudio@gmail.com";
+    const db = await getDb();
+    const { users } = await import("../../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const bcrypt = await import("bcryptjs");
+
+    const existingUser = await db.select().from(users).where(eq(users.email, targetEmail)).limit(1);
+    const temporaryPassword = "tempAdmin123!";
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+    if (existingUser.length > 0) {
+      console.log(`[SuperAdmin] Updating user ${targetEmail} to SuperAdmin role.`);
+      await db.update(users)
+        .set({ role: "SuperAdmin", passwordHash, name: "Meshcraft Studio Admin" })
+        .where(eq(users.email, targetEmail));
+    } else {
+      console.log(`[SuperAdmin] Creating new SuperAdmin user: ${targetEmail}`);
+      await db.insert(users).values({
+        openId: `superadmin-${Date.now()}`,
+        name: "Meshcraft Studio Admin",
+        email: targetEmail,
+        passwordHash,
+        role: "SuperAdmin",
+        isActive: 1 as any,
+        loginMethod: "email",
+      });
+    }
+    console.log(`[SuperAdmin] User ${targetEmail} is ready with temporary password: ${temporaryPassword}`);
   } catch (error) {
-    console.error("[Database] Initialization failed:", error);
+    console.error("[Database] Initialization or SuperAdmin setup failed:", error);
   }
 
   // Configure body parser with larger size limit for file uploads
@@ -93,7 +123,7 @@ async function startServer() {
   }
 
   server.listen(port, () => {
-    console.log(`[AutoTools ERP] Server running on http://localhost:${port}/`);
+    console.log(`[AutoTools ERP] Server running on http://localhost:${port}/` );
     console.log(`[AutoTools ERP] Environment: ${process.env.NODE_ENV ?? "development"}`);
     // Phase-5: Start daily snapshot cron job (runs at midnight every day)
     startDailySnapshotCron();

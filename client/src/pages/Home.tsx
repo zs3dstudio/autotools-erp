@@ -150,30 +150,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Demo Credentials Info */}
-        <Card className="border-dashed border-muted-foreground/30 bg-muted/20">
-          <CardContent className="pt-4 pb-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Demo Credentials (password: demo1234)</p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <div className="flex justify-between">
-                <span className="font-medium text-foreground">SuperAdmin</span>
-                <span>superadmin@autotools.demo</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-foreground">Admin (HO)</span>
-                <span>admin@autotools.demo</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-foreground">Branch Manager</span>
-                <span>manager@autotools.demo</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-foreground">POS Cashier</span>
-                <span>cashier@autotools.demo</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
     </div>
   );

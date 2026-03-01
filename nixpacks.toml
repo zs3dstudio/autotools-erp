@@ -1,31 +1,11 @@
-pes/[rpehaacste-sd.osme"t:u p"]^
-1n9i.x0P.k4g"s, 
-=   [ " n"o@dveijtse_j2s0/"p,l u"gpiynt-hroena3c"t," :" g"c^c4".,3 ."4g"n,u
-m a k e ""]a
-u
-t[opphraesfeisx.eirn"s:t a"l^l1]0
-.c4m.d2s1 "=, 
-[ " n p m" dirnisztzallel- k-i-tl"e:g a"c^y0-.p3e0e.r5-"d,e
-p s " ] 
-"
-e[spbhuaisleds".:b u"i^l0d.]2
-5c.m1d"s, 
-=   [ " n"pems lriunnt "b:u i"l^d9".]2
-1
-.[0s"t,a
-r t ] 
- c"medssl i=n t[-"pnlpumg irnu-nr esatcatr-th"o]o
- k
- s": "^5.1.0",
-     "eslint-plugin-react-refresh": "^0.4.19",
-	     "globals": "^16.0.0",
-		     "postcss": "^8.5.3",
-			     "prettier": "^3.5.3",
-				     "tailwindcss": "^4.0.12",
-					     "tsx": "^4.19.3",
-						     "typescript": "^5.8.2",
-							     "typescript-eslint": "^8.26.0",
-								     "vite": "^6.2.1",
-									     "vitest": "^3.0.8"
-										   }
-										   }
+[phases.setup]
+nixPkgs = ["nodejs_20", "python3", "gcc", "gnumake"]
+
+[phases.install]
+cmds = ["npm install --legacy-peer-deps"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmds = ["npm run start"]

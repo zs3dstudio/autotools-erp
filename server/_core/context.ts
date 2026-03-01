@@ -50,7 +50,7 @@ export async function createContext(
       const sessionUser = await sdk.authenticateRequest(opts.req);
       if (sessionUser) {
         // Enrich with full user data from MySQL
-        // getUserByOpenId is already imported at the top
+        const { getUserByOpenId } = await import("../db");
         user = await getUserByOpenId((sessionUser as any).openId ?? (sessionUser as any).id) ?? sessionUser;
       }
     } catch {

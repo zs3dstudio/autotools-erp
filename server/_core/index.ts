@@ -59,9 +59,9 @@ async function ensureSuperAdmin() {
         isActive: 1,
         branchId: 1,
         loginMethod: "local",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastSignedIn: new Date(),
+        createdAt: sql`CURRENT_TIMESTAMP`,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+        lastSignedIn: sql`CURRENT_TIMESTAMP`,
       });
       console.log("[SuperAdmin] SuperAdmin user created successfully.");
     } else {
@@ -69,7 +69,8 @@ async function ensureSuperAdmin() {
       await db.update(users)
         .set({ 
           passwordHash: hashedPassword,
-          role: "SuperAdmin" 
+          role: "SuperAdmin",
+          updatedAt: sql`CURRENT_TIMESTAMP`
         })
         .where(eq(users.email, adminEmail));
       console.log("[SuperAdmin] SuperAdmin user updated successfully.");

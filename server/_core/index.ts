@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { getDb, initializeDatabase } from "../db";
+import { users } from "../../drizzle/schema";
 // Phase-5: Daily snapshot cron job
 import { startDailySnapshotCron } from "../cron/dailySnapshot";
 

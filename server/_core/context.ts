@@ -35,12 +35,12 @@ export async function createContext(
     }
 
     // Auto-login as SuperAdmin if no session exists
-    if (!user) {
-      const superAdmin = previewGetUserByOpenId("preview-superadmin-001");
-      if (superAdmin) {
-        user = superAdmin;
-      }
-    }
+    // if (!user) {
+    //   const superAdmin = previewGetUserByOpenId("preview-superadmin-001");
+    //   if (superAdmin) {
+    //     user = superAdmin;
+    //   }
+    // }
   } else {
     // Production: authenticate via session cookie
     try {

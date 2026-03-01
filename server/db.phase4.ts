@@ -341,6 +341,47 @@ export async function getDistributionHistory() {
   return db.select().from(profitDistributions).orderBy(desc(profitDistributions.distributionPeriod));
 }
 
+export async function previewDistribution(period: string) {
+  const db = await getDb();
+  const [year, month] = period.split("-");
+  const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+  const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+
+  const poolResult = await db
+    .select({ total: sql<string>`COALESCE(SUM(CAST(${saleItems.investor70} AS REAL)), 0)` })
+    .from(saleItems)
+    .where(and(sql`${saleItems.createdAt} >= ${startDate}`, sql`${saleItems.createdAt} <= ${endDate}`));
+
+  const totalPool = parseFloat(poolResult[0]?.total ?? "0");
+
+  const capitalRows = await db
+    .select({
+      investorId: investors.id,
+      investorName: investors.name,
+      totalCapital: sql<string>`COALESCE(SUM(CAST(${investorCapital.amount} AS REAL)), 0)`,
+    })
+    .from(investors)
+    .leftJoin(investorCapital, eq(investors.id, investorCapital.investorId))
+    .where(eq(investors.isActive, true))
+    .groupBy(investors.id, investors.name);
+
+  const grandTotal = capitalRows.reduce((sum, row) => sum + parseFloat(row.totalCapital), 0);
+  const breakdown = capitalRows.map((row) => {
+    const capital = parseFloat(row.totalCapital);
+    const sharePercent = grandTotal > 0 ? (capital / grandTotal) * 100 : 0;
+    const distributedAmount = (totalPool * sharePercent) / 100;
+    return {
+      investorId: row.investorId,
+      investorName: row.investorName,
+      totalCapital: capital,
+      capitalSharePercent: sharePercent.toFixed(2),
+      distributedAmount: distributedAmount.toFixed(2),
+    };
+  });
+
+  return { period, totalPool, grandTotalCapital: grandTotal, breakdown };
+}
+
 export async function getDistributionDetails(distributionId: number) {
   const db = await getDb();
   return db

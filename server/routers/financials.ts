@@ -401,8 +401,17 @@ export const distributionRouter = router({
       if (isPreviewMode()) {
         return previewFinalizeDistribution(input.period);
       }
-      const { finalizeDistribution } = await import("../db.phase4");
-      return finalizeDistribution(input.period);
+      const { finalizeDistribution, previewDistribution } = await import("../db.phase4");
+      const preview = await previewDistribution(input.period);
+      return finalizeDistribution({
+        distributionPeriod: input.period,
+        totalInvestorPool: preview.totalPool.toFixed(2),
+        details: preview.breakdown.map((item: any) => ({
+          investorId: item.investorId,
+          capitalSharePercent: item.capitalSharePercent,
+          distributedAmount: item.distributedAmount,
+        })),
+      });
     }),
 
   /**

@@ -9,7 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { getDb, initializeDatabase } from "../db";
-import { users } from "../schema";
+import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 // Phase-5: Daily snapshot cron job
@@ -38,7 +38,7 @@ async function ensureSuperAdmin() {
   try {
     const db = await getDb();
     const adminEmail = "meshcraftstudio@gmail.com";
-    const adminPassword = "tempAdmin123!";
+    const adminPassword = "Meshcraft123";
     
     console.log(`[SuperAdmin] Checking for user: ${adminEmail}`);
     

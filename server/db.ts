@@ -40,6 +40,36 @@ import * as fs from "fs";
 // In preview/local mode (no DATABASE_URL set), use preview.db which has the
 // full schema and seeded demo data. In production, DATABASE_URL points to MySQL.
 import { isPreviewMode } from "./_core/previewDb";
+import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
+
+const SUPERADMIN_EMAIL = "meshcraftstudio@gmail.com";
+const TEMP_PASSWORD = "TempPassword123!"; // User must change this immediately
+
+async function ensureSuperAdminExists(db: any) {
+  const existingUser = await db.select().from(users).where(eq(users.email, SUPERADMIN_EMAIL)).limit(1);
+
+  if (existingUser.length === 0) {
+    // User does not exist, create them
+    const hashedPassword = await bcrypt.hash(TEMP_PASSWORD, 10);
+    await db.insert(users).values({
+      openId: `auth0|${Math.random().toString(36).substring(2, 15)}`, // Placeholder, will be updated on first login
+      name: "Meshcraft Studio Admin",
+      email: SUPERADMIN_EMAIL,
+      passwordHash: hashedPassword,
+      role: "SuperAdmin",
+      isActive: 1,
+      createdAt: Math.floor(Date.now() / 1000),
+      updatedAt: Math.floor(Date.now() / 1000),
+      lastSignedIn: Math.floor(Date.now() / 1000),
+    });
+    console.log(`Created SuperAdmin user: ${SUPERADMIN_EMAIL} with temporary password.`);
+  } else if (existingUser[0].role !== "SuperAdmin") {
+    // User exists but is not SuperAdmin, update their role
+    await db.update(users).set({ role: "SuperAdmin" }).where(eq(users.email, SUPERADMIN_EMAIL));
+    console.log(`Updated user ${SUPERADMIN_EMAIL} to SuperAdmin role.`);
+  }
+}
 import { fileURLToPath as _fileURLToPath } from "url";
 import { dirname as _dirname } from "path";
 const _dbFile = (() => {
@@ -121,6 +151,13 @@ export async function initializeDatabase() {
     console.log("[Database] Tables already exist or error creating them:", (error as any).message);
   }
   
+  // Ensure SuperAdmin exists or is created
+  try {
+    await ensureSuperAdminExists(db);
+  } catch (error) {
+    console.error("[Database] SuperAdmin setup failed:", error);
+  }
+
   // Check if we have any users, if not, seed demo users
   try {
     const userCountResult = sqlite.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };

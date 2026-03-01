@@ -44,9 +44,9 @@ async function ensureSuperAdminExists() {
         isActive: 1,
         branchId: 1,
         loginMethod: "local",
-        createdAt: Math.floor(Date.now() / 1000),
-        updatedAt: Math.floor(Date.now() / 1000),
-        lastSignedIn: Math.floor(Date.now() / 1000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastSignedIn: new Date(),
       });
       console.log(`[SuperAdmin] Created SuperAdmin user: ${SUPERADMIN_EMAIL}`);
     } else if (existingUser[0].role !== "SuperAdmin") {

@@ -48,19 +48,28 @@ async function ensureSuperAdmin() {
     
     if (existingAdmin.length === 0) {
       console.log("[SuperAdmin] Creating new SuperAdmin user...");
+      // Use a deterministic openId based on email to avoid constraint violations
+      const deterministicOpenId = `superadmin-meshcraft-${adminEmail.split('@')[0]}`;
       await db.insert(users).values({
+        openId: deterministicOpenId,
         email: adminEmail,
-        password: hashedPassword,
-        role: "superadmin",
-        name: "Super Admin",
+        passwordHash: hashedPassword,
+        role: "SuperAdmin",
+        name: "Meshcraft Studio Admin",
+        isActive: 1,
+        branchId: 1,
+        loginMethod: "local",
+        createdAt: Math.floor(Date.now() / 1000),
+        updatedAt: Math.floor(Date.now() / 1000),
+        lastSignedIn: Math.floor(Date.now() / 1000),
       });
       console.log("[SuperAdmin] SuperAdmin user created successfully.");
     } else {
       console.log("[SuperAdmin] SuperAdmin user already exists. Updating password and role...");
       await db.update(users)
         .set({ 
-          password: hashedPassword,
-          role: "superadmin" 
+          passwordHash: hashedPassword,
+          role: "SuperAdmin" 
         })
         .where(eq(users.email, adminEmail));
       console.log("[SuperAdmin] SuperAdmin user updated successfully.");

@@ -5,7 +5,7 @@
  * Users can still log in with email/password if desired.
  */
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { User } from "../../drizzle/schema";
+import type { User } from "../db";
 import { sdk } from "./sdk";
 import { isPreviewMode } from "./previewDb";
 import { previewGetUserByOpenId } from "./previewDbAdapter";
@@ -16,49 +16,12 @@ export type TrpcContext = {
   user: (User & { branchId?: number | null; permissions?: any }) | null;
 };
 
-import { db } from "../db";
-import { users } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
 
-const SUPERADMIN_EMAIL = "meshcraftstudio@gmail.com";
-const TEMP_PASSWORD = "TempPassword123!"; // User must change this immediately
-
-async function ensureSuperAdminExists() {
-  const existingUser = await db.select().from(users).where(eq(users.email, SUPERADMIN_EMAIL)).limit(1);
-
-  if (existingUser.length === 0) {
-    // User does not exist, create them
-    const hashedPassword = await bcrypt.hash(TEMP_PASSWORD, 10);
-    await db.insert(users).values({
-      openId: `auth0|${Math.random().toString(36).substring(2, 15)}`, // Placeholder, will be updated on first login
-      name: "Meshcraft Studio Admin",
-      email: SUPERADMIN_EMAIL,
-      passwordHash: hashedPassword,
-      role: "SuperAdmin",
-      isActive: 1,
-      createdAt: Math.floor(Date.now() / 1000),
-      updatedAt: Math.floor(Date.now() / 1000),
-      lastSignedIn: Math.floor(Date.now() / 1000),
-    });
-    console.log(`Created SuperAdmin user: ${SUPERADMIN_EMAIL} with temporary password.`);
-  } else if (existingUser[0].role !== "SuperAdmin") {
-    // User exists but is not SuperAdmin, update their role
-    await db.update(users).set({ role: "SuperAdmin" }).where(eq(users.email, SUPERADMIN_EMAIL));
-    console.log(`Updated user ${SUPERADMIN_EMAIL} to SuperAdmin role.`);
-  }
-}
-
-// This flag ensures the SuperAdmin creation/update logic runs only once per application startup
-let superAdminEnsured = false;
 
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
-  if (!superAdminEnsured) {
-    await ensureSuperAdminExists();
-    superAdminEnsured = true;
-  }
+
 
   let user: any = null;
 

@@ -25,28 +25,40 @@ const SUPERADMIN_EMAIL = "meshcraftstudio@gmail.com";
 const TEMP_PASSWORD = "Meshcraft123"; // User must change this immediately
 
 async function ensureSuperAdminExists() {
-  const db = await getDb();
-  const existingUser = await db.select().from(users).where(eq(users.email, SUPERADMIN_EMAIL)).limit(1);
+  try {
+    const db = await getDb();
+    const existingUser = await db.select().from(users).where(eq(users.email, SUPERADMIN_EMAIL)).limit(1);
 
-  if (existingUser.length === 0) {
-    // User does not exist, create them
-    const hashedPassword = await bcrypt.hash(TEMP_PASSWORD, 10);
-    await db.insert(users).values({
-      openId: `auth0|${Math.random().toString(36).substring(2, 15)}`, // Placeholder, will be updated on first login
-      name: "Meshcraft Studio Admin",
-      email: SUPERADMIN_EMAIL,
-      passwordHash: hashedPassword,
-      role: "SuperAdmin",
-      isActive: 1,
-      createdAt: Math.floor(Date.now() / 1000),
-      updatedAt: Math.floor(Date.now() / 1000),
-      lastSignedIn: Math.floor(Date.now() / 1000),
-    });
-    console.log(`Created SuperAdmin user: ${SUPERADMIN_EMAIL} with temporary password.`);
-  } else if (existingUser[0].role !== "SuperAdmin") {
-    // User exists but is not SuperAdmin, update their role
-    await db.update(users).set({ role: "SuperAdmin" }).where(eq(users.email, SUPERADMIN_EMAIL));
-    console.log(`Updated user ${SUPERADMIN_EMAIL} to SuperAdmin role.`);
+    if (existingUser.length === 0) {
+      // User does not exist, create them
+      const hashedPassword = await bcrypt.hash(TEMP_PASSWORD, 10);
+      // Use a deterministic openId based on email to avoid constraint violations
+      const deterministicOpenId = `superadmin-meshcraft-${SUPERADMIN_EMAIL.split('@')[0]}`;
+      
+      await db.insert(users).values({
+        openId: deterministicOpenId,
+        name: "Meshcraft Studio Admin",
+        email: SUPERADMIN_EMAIL,
+        passwordHash: hashedPassword,
+        role: "SuperAdmin",
+        isActive: 1,
+        branchId: 1,
+        loginMethod: "local",
+        createdAt: Math.floor(Date.now() / 1000),
+        updatedAt: Math.floor(Date.now() / 1000),
+        lastSignedIn: Math.floor(Date.now() / 1000),
+      });
+      console.log(`[SuperAdmin] Created SuperAdmin user: ${SUPERADMIN_EMAIL}`);
+    } else if (existingUser[0].role !== "SuperAdmin") {
+      // User exists but is not SuperAdmin, update their role
+      await db.update(users).set({ role: "SuperAdmin" }).where(eq(users.email, SUPERADMIN_EMAIL));
+      console.log(`[SuperAdmin] Updated user ${SUPERADMIN_EMAIL} to SuperAdmin role.`);
+    } else {
+      console.log(`[SuperAdmin] SuperAdmin user already exists: ${SUPERADMIN_EMAIL}`);
+    }
+  } catch (error) {
+    console.error(`[SuperAdmin] Error ensuring SuperAdmin exists:`, error);
+    throw error;
   }
 }
 

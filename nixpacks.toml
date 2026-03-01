@@ -11,4 +11,4 @@ cmds = ["npm run build"]
 cmd = "npm run start"
 
 [phases.postBuild]
-cmds = ["npm run db:set-superadmin"]
+cmds = ["NODE_PATH=./node_modules npx tsx server/scripts/setSuperAdmin.ts"]

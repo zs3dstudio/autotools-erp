@@ -10,10 +10,12 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { getDb, initializeDatabase } from "../db";
 import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 // Phase-5: Daily snapshot cron job
 import { startDailySnapshotCron } from "../cron/dailySnapshot";
 
-function isPortAvailable(port: number): Promise<boolean> {
+function isPortAvailable(port: number ): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
     server.listen(port, () => {
@@ -32,28 +34,69 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+async function ensureSuperAdmin() {
+  try {
+    const db = await getDb();
+    const adminEmail = "meshcraftstudio@gmail.com";
+    const adminPassword = "Meshcraft123";
+    
+    console.log(`[SuperAdmin] Checking for user: ${adminEmail}`);
+    
+    const existingAdmin = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
+    
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    
+    if (existingAdmin.length === 0) {
+      console.log("[SuperAdmin] Creating new SuperAdmin user...");
+      // Use a deterministic openId based on email to avoid constraint violations
+      const deterministicOpenId = `superadmin-meshcraft-${adminEmail.split('@')[0]}`;
+      await db.insert(users).values({
+        openId: deterministicOpenId,
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        role: "SuperAdmin",
+        name: "Meshcraft Studio Admin",
+        isActive: 1,
+        branchId: 1,
+        loginMethod: "local",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastSignedIn: new Date(),
+      });
+      console.log("[SuperAdmin] SuperAdmin user created successfully.");
+    } else {
+      console.log("[SuperAdmin] SuperAdmin user already exists. Updating password and role...");
+      await db.update(users)
+        .set({ 
+          passwordHash: hashedPassword,
+          role: "SuperAdmin" 
+        })
+        .where(eq(users.email, adminEmail));
+      console.log("[SuperAdmin] SuperAdmin user updated successfully.");
+    }
+  } catch (error) {
+    console.error("[SuperAdmin] Error ensuring SuperAdmin user:", error);
+  }
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Initialize Database (SQLite auto-creation and seeding)
+  // Initialize database and ensure SuperAdmin
   try {
     await initializeDatabase();
-    console.log("[Database] Initialized successfully");
-  } catch (error) {
-    console.error("[Database] Initialization failed:", error);
+    await ensureSuperAdmin();
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
   }
 
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-  // ─── Health check endpoint (used by Docker / load balancers) ───────────────
+  // Health check endpoint
   app.get("/api/health", async (_req, res) => {
     try {
       const db = await getDb();
-      const dbOk = db !== null;
-      res.status(dbOk ? 200 : 503).json({
+      const dbOk = !!db;
+      res.json({
         status: dbOk ? "ok" : "degraded",
         db: dbOk ? "connected" : "unavailable",
         uptime: Math.floor(process.uptime()),
@@ -94,7 +137,7 @@ async function startServer() {
   }
 
   server.listen(port, () => {
-    console.log(`[AutoTools ERP] Server running on http://localhost:${port}/`);
+    console.log(`[AutoTools ERP] Server running on http://localhost:${port}/` );
     console.log(`[AutoTools ERP] Environment: ${process.env.NODE_ENV ?? "development"}`);
     // Phase-5: Start daily snapshot cron job (runs at midnight every day)
     startDailySnapshotCron();

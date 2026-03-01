@@ -17,7 +17,6 @@ export type TrpcContext = {
 };
 
 
-
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
@@ -51,7 +50,7 @@ export async function createContext(
       const sessionUser = await sdk.authenticateRequest(opts.req);
       if (sessionUser) {
         // Enrich with full user data from MySQL
-        const { getUserByOpenId } = await import("../db");
+        // getUserByOpenId is already imported at the top
         user = await getUserByOpenId((sessionUser as any).openId ?? (sessionUser as any).id) ?? sessionUser;
       }
     } catch {

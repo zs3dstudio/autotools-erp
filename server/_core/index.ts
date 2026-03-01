@@ -9,6 +9,9 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { getDb, initializeDatabase } from "../db";
+import { users } from "../schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 // Phase-5: Daily snapshot cron job
 import { startDailySnapshotCron } from "../cron/dailySnapshot";
 
@@ -31,58 +34,60 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+async function ensureSuperAdmin() {
+  try {
+    const db = await getDb();
+    const adminEmail = "meshcraftstudio@gmail.com";
+    const adminPassword = "tempAdmin123!";
+    
+    console.log(`[SuperAdmin] Checking for user: ${adminEmail}`);
+    
+    const existingAdmin = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
+    
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    
+    if (existingAdmin.length === 0) {
+      console.log("[SuperAdmin] Creating new SuperAdmin user...");
+      await db.insert(users).values({
+        email: adminEmail,
+        password: hashedPassword,
+        role: "superadmin",
+        name: "Super Admin",
+      });
+      console.log("[SuperAdmin] SuperAdmin user created successfully.");
+    } else {
+      console.log("[SuperAdmin] SuperAdmin user already exists. Updating password and role...");
+      await db.update(users)
+        .set({ 
+          password: hashedPassword,
+          role: "superadmin" 
+        })
+        .where(eq(users.email, adminEmail));
+      console.log("[SuperAdmin] SuperAdmin user updated successfully.");
+    }
+  } catch (error) {
+    console.error("[SuperAdmin] Error ensuring SuperAdmin user:", error);
+  }
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Initialize Database (SQLite auto-creation and seeding)
+  // Initialize database and ensure SuperAdmin
   try {
     await initializeDatabase();
-    console.log("[Database] Initialized successfully");
-
-    // Ensure SuperAdmin user exists
-    const targetEmail = "meshcraftstudio@gmail.com";
-    const db = await getDb();
-    const { users } = await import("../../drizzle/schema");
-    const { eq } = await import("drizzle-orm");
-    const bcrypt = await import("bcryptjs");
-
-    const existingUser = await db.select().from(users).where(eq(users.email, targetEmail)).limit(1);
-    const temporaryPassword = "tempAdmin123!";
-    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
-
-    if (existingUser.length > 0) {
-      console.log(`[SuperAdmin] Updating user ${targetEmail} to SuperAdmin role.`);
-      await db.update(users)
-        .set({ role: "SuperAdmin", passwordHash, name: "Meshcraft Studio Admin" })
-        .where(eq(users.email, targetEmail));
-    } else {
-      console.log(`[SuperAdmin] Creating new SuperAdmin user: ${targetEmail}`);
-      await db.insert(users).values({
-        openId: `superadmin-${Date.now()}`,
-        name: "Meshcraft Studio Admin",
-        email: targetEmail,
-        passwordHash,
-        role: "SuperAdmin",
-        isActive: 1 as any,
-        loginMethod: "email",
-      });
-    }
-    console.log(`[SuperAdmin] User ${targetEmail} is ready with temporary password: ${temporaryPassword}`);
-  } catch (error) {
-    console.error("[Database] Initialization or SuperAdmin setup failed:", error);
+    await ensureSuperAdmin();
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
   }
 
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-  // ─── Health check endpoint (used by Docker / load balancers) ───────────────
-  app.get("/api/health", async (_req, res) => {
+  // Health check endpoint
+  app.get("/api/health", async (req, res) => {
     try {
       const db = await getDb();
-      const dbOk = db !== null;
-      res.status(dbOk ? 200 : 503).json({
+      const dbOk = !!db;
+      res.json({
         status: dbOk ? "ok" : "degraded",
         db: dbOk ? "connected" : "unavailable",
         uptime: Math.floor(process.uptime()),
